@@ -1,0 +1,32 @@
+                   precision    recall  f1-score   support
+
+    action_movies       1.00      1.00      1.00        20
+     actor_movies       1.00      1.00      1.00        20
+     award_movies       0.91      1.00      0.95        20
+ biography_movies       1.00      1.00      1.00        20
+    comedy_movies       1.00      1.00      1.00        20
+ emotional_movies       1.00      1.00      1.00        20
+         fallback       1.00      1.00      1.00        16
+    family_movies       1.00      1.00      1.00        20
+          goodbye       1.00      1.00      1.00        21
+         greeting       1.00      1.00      1.00        21
+             help       1.00      1.00      1.00        20
+high_rated_movies       1.00      0.90      0.95        20
+     hindi_movies       1.00      1.00      1.00        20
+    horror_movies       1.00      1.00      1.00        20
+    latest_movies       1.00      1.00      1.00        20
+      mood_movies       0.95      1.00      0.98        20
+       movie_like       1.00      1.00      1.00        20
+     multi_filter       1.00      1.00      1.00        20
+     old_classics       1.00      1.00      1.00        20
+   popular_movies       1.00      1.00      1.00        20
+   recommendation       1.00      1.00      1.00        20
+  romantic_movies       1.00      0.95      0.97        20
+     south_movies       1.00      1.00      1.00        20
+           thanks       1.00      1.00      1.00        21
+  thriller_movies       1.00      1.00      1.00        20
+      year_movies       1.00      1.00      1.00        20
+
+         accuracy                           0.99       519
+        macro avg       0.99      0.99      0.99       519
+     weighted avg       0.99      0.99      0.99       519

@@ -1,0 +1,98 @@
+title,genre,language,year,imdb,actors,family_safe,popularity
+Dilwale Dulhania Le Jayenge,Romance,Hindi,1995,8.1,"Shah Rukh Khan|Kajol|Amrish Puri",True,950000
+Lagaan,Drama,Hindi,2001,8.1,"Aamir Khan|Gracy Singh|Rachel Shelley",True,280000
+3 Idiots,Comedy,Hindi,2009,8.4,"Aamir Khan|Madhavan|Sharman Joshi",True,620000
+Dangal,Biography,Hindi,2016,8.4,"Aamir Khan|Fatima Sana Shaikh|Sanya Malhotra",True,390000
+PK,Comedy,Hindi,2014,8.1,"Aamir Khan|Anushka Sharma|Sushant Singh Rajput",True,410000
+Mughal-E-Azam,Historical,Hindi,1960,8.2,"Dilip Kumar|Madhubala|Prithviraj Kapoor",True,85000
+Sholay,Action,Hindi,1975,8.2,"Dharmendra|Amitabh Bachchan|Hema Malini",False,510000
+Deewar,Drama,Hindi,1975,8.0,"Amitabh Bachchan|Shashi Kapoor|Nirupa Roy",False,125000
+Kuch Kuch Hota Hai,Romance,Hindi,1998,7.5,"Shah Rukh Khan|Kajol|Rani Mukerji",True,490000
+Kabhi Khushi Kabhie Gham,Drama,Hindi,2001,7.4,"Amitabh Bachchan|Shah Rukh Khan|Kajol",True,350000
+Swades,Drama,Hindi,2004,8.2,"Shah Rukh Khan|Gayatri Joshi|Kishori Ballal",True,110000
+Chak De! India,Drama,Hindi,2007,8.2,"Shah Rukh Khan|Vidya Malavade|Sagarika Ghatge",True,230000
+Taare Zameen Par,Drama,Hindi,2007,8.4,"Aamir Khan|Darsheel Safary|Tisca Chopra",True,175000
+Rang De Basanti,Drama,Hindi,2006,8.1,"Aamir Khan|Soha Ali Khan|Sharman Joshi",False,285000
+Zindagi Na Milegi Dobara,Comedy,Hindi,2011,8.2,"Hrithik Roshan|Farhan Akhtar|Abhay Deol",True,325000
+Dil Chahta Hai,Comedy,Hindi,2001,8.1,"Aamir Khan|Saif Ali Khan|Akshaye Khanna",False,220000
+Queen,Drama,Hindi,2014,8.2,"Kangana Ranaut|Rajkummar Rao|Lisa Haydon",True,195000
+Barfi,Comedy,Hindi,2012,8.1,"Ranbir Kapoor|Priyanka Chopra|Ileana D'Cruz",True,215000
+Devdas,Drama,Hindi,2002,7.3,"Shah Rukh Khan|Madhuri Dixit|Aishwarya Rai",False,180000
+Black,Drama,Hindi,2005,8.2,"Amitabh Bachchan|Rani Mukerji|Ayesha Kapoor",True,185000
+Kahaani,Thriller,Hindi,2012,8.1,"Vidya Balan|Parambrata Chattopadhyay|Nawazuddin Siddiqui",False,165000
+Andhadhun,Thriller,Hindi,2018,8.3,"Ayushmann Khurrana|Tabu|Radhika Apte",False,385000
+Article 15,Drama,Hindi,2019,8.1,"Ayushmann Khurrana|Isha Talwar|Manoj Pahwa",False,210000
+Gully Boy,Drama,Hindi,2019,7.9,"Ranveer Singh|Alia Bhatt|Siddhant Chaturvedi",False,280000
+Masaan,Drama,Hindi,2015,8.1,"Richa Chadha|Vicky Kaushal|Shweta Tripathi",False,95000
+Udta Punjab,Drama,Hindi,2016,7.8,"Shahid Kapoor|Alia Bhatt|Diljit Dosanjh",False,210000
+Pink,Thriller,Hindi,2016,8.1,"Amitabh Bachchan|Taapsee Pannu|Angad Bedi",False,245000
+NH10,Thriller,Hindi,2015,7.0,"Anushka Sharma|Neil Bhoopalam|Darshan Kumaar",False,110000
+Bard of Blood,Thriller,Hindi,2019,7.1,"Emraan Hashmi|Sobhita Dhulipala|Vineet Kumar Singh",False,90000
+Drishyam,Thriller,Hindi,2015,8.2,"Ajay Devgn|Shriya Saran|Tabu",False,310000
+Bajrangi Bhaijaan,Drama,Hindi,2015,8.0,"Salman Khan|Harshaali Malhotra|Kareena Kapoor",True,480000
+Sultan,Action,Hindi,2016,7.1,"Salman Khan|Anushka Sharma|Randeep Hooda",False,390000
+Tiger Zinda Hai,Action,Hindi,2017,6.0,"Salman Khan|Katrina Kaif|Paresh Rawal",False,420000
+Simmba,Action,Hindi,2018,6.6,"Ranveer Singh|Sara Ali Khan|Sonu Sood",False,340000
+War,Action,Hindi,2019,6.5,"Hrithik Roshan|Tiger Shroff|Vaani Kapoor",False,510000
+Kabir Singh,Romance,Hindi,2019,7.1,"Shahid Kapoor|Kiara Advani|Soham Majumdar",False,480000
+Jab We Met,Romance,Hindi,2007,7.9,"Shahid Kapoor|Kareena Kapoor|Dara Singh",True,410000
+Ae Dil Hai Mushkil,Romance,Hindi,2016,6.9,"Ranbir Kapoor|Anushka Sharma|Aishwarya Rai",True,310000
+Tamasha,Drama,Hindi,2015,7.5,"Ranbir Kapoor|Deepika Padukone|Javed Sheikh",True,280000
+Yeh Jawaani Hai Deewani,Romance,Hindi,2013,7.3,"Ranbir Kapoor|Deepika Padukone|Aditya Roy Kapoor",True,440000
+Cocktail,Romance,Hindi,2012,6.8,"Saif Ali Khan|Deepika Padukone|Diana Penty",False,290000
+Padmaavat,Historical,Hindi,2018,7.0,"Ranveer Singh|Deepika Padukone|Shahid Kapoor",True,360000
+Bajirao Mastani,Historical,Hindi,2015,7.2,"Ranveer Singh|Deepika Padukone|Priyanka Chopra",True,330000
+Piku,Comedy,Hindi,2015,8.0,"Amitabh Bachchan|Deepika Padukone|Irrfan Khan",True,210000
+Tumhari Sulu,Comedy,Hindi,2017,7.5,"Vidya Balan|Manav Kaul|Neha Dhupia",True,120000
+Stree,Horror,Hindi,2018,7.7,"Rajkummar Rao|Shraddha Kapoor|Pankaj Tripathi",False,350000
+Bhool Bhulaiyaa,Horror,Hindi,2007,7.4,"Akshay Kumar|Vidya Balan|Shiney Ahuja",False,230000
+Raazi,Thriller,Hindi,2018,7.9,"Alia Bhatt|Vicky Kaushal|Jaideep Ahlawat",False,300000
+Kesari,Action,Hindi,2019,7.1,"Akshay Kumar|Parineeti Chopra|Mir Sarwar",True,350000
+Mission Mangal,Biography,Hindi,2019,6.5,"Akshay Kumar|Vidya Balan|Taapsee Pannu",True,290000
+Toilet Ek Prem Katha,Comedy,Hindi,2017,6.3,"Akshay Kumar|Bhumi Pednekar|Divyendu Sharma",True,215000
+Airlift,Drama,Hindi,2016,8.0,"Akshay Kumar|Nimrat Kaur|Inaamulhaq",True,240000
+Baby,Action,Hindi,2015,7.4,"Akshay Kumar|Taapsee Pannu|Danny Denzongpa",False,220000
+Special 26,Thriller,Hindi,2013,7.8,"Akshay Kumar|Manoj Bajpayee|Kajal Aggarwal",False,195000
+Jolly LLB 2,Comedy,Hindi,2017,7.4,"Akshay Kumar|Huma Qureshi|Annu Kapoor",True,280000
+Good Newwz,Comedy,Hindi,2019,6.7,"Akshay Kumar|Kareena Kapoor|Diljit Dosanjh",True,370000
+Housefull 4,Comedy,Hindi,2019,4.3,"Akshay Kumar|Bobby Deol|Riteish Deshmukh",True,320000
+Andaz Apna Apna,Comedy,Hindi,1994,8.1,"Aamir Khan|Salman Khan|Raveena Tandon",True,185000
+Hera Pheri,Comedy,Hindi,2000,8.2,"Akshay Kumar|Suniel Shetty|Paresh Rawal",True,320000
+Golmaal,Comedy,Hindi,2006,7.7,"Ajay Devgn|Arshad Warsi|Sharman Joshi",True,295000
+Dhamaal,Comedy,Hindi,2007,7.0,"Sanjay Dutt|Arshad Warsi|Jaaved Jaaferi",True,260000
+Total Dhamaal,Comedy,Hindi,2019,5.7,"Ajay Devgn|Madhuri Dixit|Anil Kapoor",True,310000
+Baahubali The Beginning,Action,Hindi,2015,8.0,"Prabhas|Rana Daggubati|Anushka Shetty",True,490000
+Baahubali The Conclusion,Action,Hindi,2017,8.2,"Prabhas|Rana Daggubati|Anushka Shetty",True,620000
+Pushpa The Rise,Action,Hindi,2021,7.6,"Allu Arjun|Fahadh Faasil|Rashmika Mandanna",False,580000
+KGF Chapter 1,Action,Hindi,2018,8.2,"Yash|Srinidhi Shetty|Ramachandra Raju",False,490000
+KGF Chapter 2,Action,Hindi,2022,8.4,"Yash|Sanjay Dutt|Raveena Tandon",False,620000
+RRR,Action,Hindi,2022,7.8,"Jr NTR|Ram Charan|Ajay Devgn",False,560000
+Brahmastra,Fantasy,Hindi,2022,5.6,"Ranbir Kapoor|Alia Bhatt|Amitabh Bachchan",True,380000
+Gangubai Kathiawadi,Biography,Hindi,2022,7.1,"Alia Bhatt|Ajay Devgn|Vijay Raaz",False,360000
+The Kashmir Files,Drama,Hindi,2022,8.3,"Mithun Chakraborty|Anupam Kher|Darshan Kumaar",False,430000
+Sooryavanshi,Action,Hindi,2021,5.4,"Akshay Kumar|Katrina Kaif|Ajay Devgn",False,490000
+Shershaah,Biography,Hindi,2021,8.4,"Sidharth Malhotra|Kiara Advani|Shiv Panditt",True,520000
+83,Biography,Hindi,2021,8.0,"Ranveer Singh|Deepika Padukone|Saqib Saleem",True,440000
+Gehraiyaan,Drama,Hindi,2022,5.9,"Deepika Padukone|Siddhant Chaturvedi|Ananya Panday",False,290000
+Laal Singh Chaddha,Drama,Hindi,2022,5.2,"Aamir Khan|Kareena Kapoor|Mona Singh",True,280000
+Pathaan,Action,Hindi,2023,5.9,"Shah Rukh Khan|Deepika Padukone|John Abraham",False,620000
+Jawan,Action,Hindi,2023,6.8,"Shah Rukh Khan|Nayanthara|Vijay Sethupathi",False,580000
+Animal,Action,Hindi,2023,6.1,"Ranbir Kapoor|Anil Kapoor|Bobby Deol",False,540000
+Dunki,Drama,Hindi,2023,5.6,"Shah Rukh Khan|Taapsee Pannu|Boman Irani",True,390000
+Sam Bahadur,Biography,Hindi,2023,8.2,"Vicky Kaushal|Sanya Malhotra|Fatima Sana Shaikh",True,320000
+12th Fail,Biography,Hindi,2023,9.1,"Vikrant Massey|Medha Shankar|Anant V Joshi",True,280000
+Munjya,Horror,Hindi,2024,7.3,"Abhay Verma|Sharvari Wagh|Mona Singh",True,195000
+Crew,Comedy,Hindi,2024,6.5,"Kareena Kapoor|Tabu|Kriti Sanon",True,310000
+Fighter,Action,Hindi,2024,6.1,"Hrithik Roshan|Deepika Padukone|Anil Kapoor",False,490000
+Article 370,Thriller,Hindi,2024,8.6,"Yami Gautam|Priyamani|Arun Govil",True,280000
+Maidaan,Biography,Hindi,2024,8.2,"Ajay Devgn|Priya Mani|Gajraj Rao",True,260000
+Bhool Bhulaiyaa 3,Horror,Hindi,2024,7.1,"Kartik Aaryan|Vidya Balan|Madhuri Dixit",True,380000
+Singham Returns,Action,Hindi,2024,5.3,"Ajay Devgn|Kareena Kapoor|Akshay Kumar",False,410000
+Stree 2,Horror,Hindi,2024,8.7,"Rajkummar Rao|Shraddha Kapoor|Tamannaah Bhatia",False,680000
+Kalki 2898 AD,Sci-Fi,Hindi,2024,7.7,"Prabhas|Deepika Padukone|Amitabh Bachchan",True,590000
+Devara,Action,Hindi,2024,6.5,"Jr NTR|Saif Ali Khan|Janhvi Kapoor",False,380000
+Bade Miyan Chote Miyan,Action,Hindi,2024,3.6,"Akshay Kumar|Tiger Shroff|Prithviraj Sukumaran",False,350000
+Do Aur Do Pyaar,Romance,Hindi,2024,7.5,"Vidya Balan|Pratik Gandhi|Ileana D'Cruz",True,120000
+Laapataa Ladies,Comedy,Hindi,2024,7.9,"Nitanshi Goel|Pratibha Ranta|Sparsh Shrivastava",True,240000
+Amar Singh Chamkila,Biography,Hindi,2024,7.8,"Diljit Dosanjh|Parineeti Chopra|Anjum Batra",True,310000
+Chandu Champion,Biography,Hindi,2024,8.1,"Kartik Aaryan|Vijay Raaz|Shreyas Talpade",True,280000
