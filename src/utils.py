@@ -7,6 +7,7 @@ import logging
 import os
 import re
 import sys
+from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
@@ -104,6 +105,46 @@ def normalize_language(lang_raw: str) -> str:
 
 def genre_to_moods(genre: str) -> list:
     return GENRE_MOOD_MAP.get(genre.lower(), [])
+
+
+def normalized_text_mask(
+    values: pd.Series,
+    raw_value: str,
+    normalizer: Callable[[str], str],
+    allow_partial: bool = False,
+) -> pd.Series:
+    """Build a case-insensitive mask for a normalized text column."""
+    normalized = normalizer(raw_value).lower()
+    lowered = values.astype(str).str.lower()
+    mask = lowered == normalized
+    if allow_partial and not mask.any():
+        mask = lowered.str.contains(raw_value.lower(), na=False, regex=False)
+    return mask
+
+
+def list_value_mask(
+    values: pd.Series,
+    raw_value: str,
+    partial: bool = False,
+) -> pd.Series:
+    """Build a case-insensitive mask for values stored in list columns."""
+    target = raw_value.lower()
+
+    def matches(items: list) -> bool:
+        if not isinstance(items, list):
+            return False
+        normalized_items = [str(item).lower() for item in items]
+        if partial:
+            return any(target in item for item in normalized_items)
+        return target in normalized_items
+
+    return values.apply(matches)
+
+
+def boolean_value_mask(values: pd.Series, expected: bool = True) -> pd.Series:
+    """Build a mask for boolean-like dataset values."""
+    accepted = ["true", "1", "yes"] if expected else ["false", "0", "no"]
+    return values.astype(str).str.lower().isin(accepted)
 
 
 def build_movies_json(csv_path: str = CSV_FILE, out_path: str = MOVIES_FILE) -> list:
