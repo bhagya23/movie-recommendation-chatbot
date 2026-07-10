@@ -1,199 +1,106 @@
 """
-chatbot.py — Chatbot inference engine.
-Loads trained DNN, predicts intent, routes to recommendation engine.
+chatbot.py — Chatbot orchestration (matches the academic notebook).
+
+Pipeline:
+    user text → intent classifier (BoW + DNN) → intent tag
+              → control intents answer directly (greeting/goodbye/thanks/help)
+              → otherwise filter the catalogue via INTENT_TAG_MAP and return top-k
 """
 
 import os
 import sys
 import random
-import logging
-from typing import Optional
-
-import numpy as np
+from typing import Dict, List
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from src.config import (
-    MODEL_FILE, WORDS_FILE, CLASSES_FILE,
-    CONFIDENCE_THRESHOLD, ERROR_THRESHOLD, CHATBOT_NAME
-)
-from src.preprocessing import bag_of_words, load_artifacts
-from src.utils import get_logger, load_intents, extract_entities
-from src.recommendation_engine import RecommendationEngine
+from src.config import TOP_RECOMMENDATIONS, DIRECT_RESPONSE_TAGS, CHATBOT_NAME
+from src.predict import IntentPredictor
+from src.recommender import RecommendationEngine
+from src.utils import get_logger, load_intents
 
 logger = get_logger("chatbot")
 
 
 class MovieChatbot:
-    """
-    Closed-domain intent-classification chatbot for Bollywood movie recommendations.
-
-    Pipeline:
-    1. User query → clean_sentence → bag_of_words
-    2. DNN model → softmax probabilities
-    3. argmax → intent class (with confidence threshold)
-    4. Entity extraction (genre, mood, year, actor, language)
-    5. RecommendationEngine.dispatch(intent, entities) → movies + explanation
-    6. Return (text_response, movies_list, explanation)
-    """
+    """Closed-domain intent-classification chatbot for movie recommendations."""
 
     def __init__(self):
-        self.model       = None
-        self.words:    list[str] = []
-        self.classes:  list[str] = []
-        self.intents:  dict      = {}
-        self.engine: RecommendationEngine = RecommendationEngine()
-        self.conversation_history: list[dict] = []
-        self._context: dict = {}  # Multi-turn context memory
-        self._load_model()
+        self.predictor = IntentPredictor()
+        self.engine = RecommendationEngine()
+        intents_data = load_intents()
+        self.intent_lookup: Dict[str, dict] = {
+            intent["tag"]: intent for intent in intents_data["intents"]
+        }
+        logger.info("MovieChatbot ready — %d intents loaded.", len(self.intent_lookup))
 
-    # ── Model loading ──────────────────────────────────────────────────────────
+    def _response_text(self, tag: str) -> str:
+        """Pick a response for the tag from the intent corpus (with a sensible default)."""
+        intent = self.intent_lookup.get(tag) or self.intent_lookup.get("recommend_general")
+        if intent and intent.get("responses"):
+            return random.choice(intent["responses"])
+        return f"Here are some movie recommendations from {CHATBOT_NAME}!"
 
-    def _load_model(self) -> None:
-        """Load keras model + vocabulary artifacts."""
-        if not os.path.exists(MODEL_FILE):
-            logger.error(
-                "Model not found at %s — please run: python src/train.py", MODEL_FILE
-            )
-            raise FileNotFoundError(
-                f"Trained model missing: {MODEL_FILE}\n"
-                "Run:  python src/train.py"
-            )
+    def chat(self, user_text: str, n_recommendations: int = TOP_RECOMMENDATIONS) -> dict:
+        """Process a user message and return intent, response text, and movies."""
+        tag, confidence = self.predictor.predict(user_text)
 
-        import tensorflow as tf  # deferred import for startup speed
-        self.model = tf.keras.models.load_model(MODEL_FILE)
-        self.words, self.classes = load_artifacts()
-        self.intents = load_intents()
-        logger.info(
-            "Model loaded — %d vocab words | %d intent classes",
-            len(self.words), len(self.classes)
-        )
-
-    # ── Intent prediction ──────────────────────────────────────────────────────
-
-    def predict_intent(self, sentence: str) -> list[dict]:
-        """
-        Return list of {intent, probability} sorted by probability desc.
-        Applies ERROR_THRESHOLD to filter low-confidence classes.
-        """
-        bow = bag_of_words(sentence, self.words)
-        bow = np.expand_dims(bow, axis=0)
-        predictions = self.model.predict(bow, verbose=0)[0]
-
-        results = [
-            {"intent": self.classes[i], "probability": float(p)}
-            for i, p in enumerate(predictions)
-            if float(p) > ERROR_THRESHOLD
-        ]
-        results.sort(key=lambda x: x["probability"], reverse=True)
-        return results
-
-    def get_top_intent(self, sentence: str) -> tuple[str, float]:
-        """Return (intent_tag, confidence) for the top prediction."""
-        results = self.predict_intent(sentence)
-        if not results:
-            return "fallback", 0.0
-        top = results[0]
-        return top["intent"], top["probability"]
-
-    # ── Response generation ────────────────────────────────────────────────────
-
-    def _get_response(self, intent_tag: str) -> str:
-        """Pick a random response string from the matched intent."""
-        for intent in self.intents["intents"]:
-            if intent["tag"] == intent_tag:
-                return random.choice(intent["responses"])
-        return "I'm not sure what you mean. Could you rephrase?"
-
-    def _update_context(self, entities: dict) -> None:
-        """Update multi-turn context with newly extracted entities (non-null only)."""
-        for k, v in entities.items():
-            if v is not None:
-                self._context[k] = v
-
-    def _merge_entities_with_context(self, entities: dict) -> dict:
-        """Merge current-turn entities with remembered context."""
-        merged = dict(self._context)
-        for k, v in entities.items():
-            if v is not None:
-                merged[k] = v
-        return merged
-
-    # ── Main chat entry point ──────────────────────────────────────────────────
-
-    def chat(
-        self,
-        user_message: str,
-        sidebar_filters: Optional[dict] = None,
-        n_recommendations: int = 5,
-    ) -> dict:
-        """
-        Process a user message and return a full response dict.
-
-        Returns:
-            {
-                "intent":        str,
-                "confidence":    float,
-                "response":      str,      # text response
-                "movies":        list,     # recommended movie dicts
-                "explanation":   str,      # why these were recommended
-                "entities":      dict,     # extracted entities
+        # Control intents respond directly, without recommendations
+        if tag in DIRECT_RESPONSE_TAGS:
+            response = self._response_text(tag)
+            logger.info("Turn — intent: %s (%.2f%%) | direct response", tag, confidence * 100)
+            return {
+                "intent": tag,
+                "confidence": confidence,
+                "response": response,
+                "explanation": "",
+                "movies": [],
             }
-        """
-        # 1. Predict intent
-        intent, confidence = self.get_top_intent(user_message)
 
-        # Low-confidence → fallback
-        if confidence < CONFIDENCE_THRESHOLD:
-            intent = "fallback"
+        movies = self.engine.filter_for_tag(tag, k=n_recommendations)
+        explanation = self.engine.explain(tag)
+        response = self._response_text(tag)
 
-        # 2. Entity extraction
-        entities  = extract_entities(user_message)
-        self._update_context(entities)
-        merged    = self._merge_entities_with_context(entities)
-
-        # 3. Text response
-        response = self._get_response(intent)
-
-        # 4. Recommendation dispatch
-        movies, explanation = self.engine.dispatch(
-            intent=intent,
-            entities=merged,
-            sidebar_filters=sidebar_filters,
-            n=n_recommendations,
-        )
-
-        # 5. Log conversation
-        turn = {
-            "user":        user_message,
-            "intent":      intent,
-            "confidence":  round(confidence, 4),
-            "bot":         response,
-            "movies":      [m["title"] for m in movies],
-            "explanation": explanation,
-        }
-        self.conversation_history.append(turn)
-        logger.info(
-            "Turn — intent: %s (%.2f%%) | movies: %d | explanation: %s",
-            intent, confidence * 100, len(movies), explanation
-        )
-
+        logger.info("Turn — intent: %s (%.2f%%) | movies: %d",
+                    tag, confidence * 100, len(movies))
         return {
-            "intent":      intent,
-            "confidence":  round(confidence, 4),
-            "response":    response,
-            "movies":      movies,
+            "intent": tag,
+            "confidence": confidence,
+            "response": response,
             "explanation": explanation,
-            "entities":    merged,
+            "movies": movies,
         }
 
-    def reset_context(self) -> None:
-        """Clear multi-turn conversation context."""
-        self._context = {}
-        self.conversation_history = []
-        logger.info("Conversation context reset.")
 
-    def get_greeting(self) -> str:
-        return self._get_response("greeting")
+# ── Module-level convenience ─────────────────────────────────────────────────────
 
-    def get_history(self) -> list[dict]:
-        return self.conversation_history
+_bot = None
+
+
+def get_chatbot() -> MovieChatbot:
+    global _bot
+    if _bot is None:
+        _bot = MovieChatbot()
+    return _bot
+
+
+def get_chatbot_response(user_text: str, k: int = TOP_RECOMMENDATIONS) -> dict:
+    return get_chatbot().chat(user_text, n_recommendations=k)
+
+
+if __name__ == "__main__":
+    bot = MovieChatbot()
+    demo = [
+        "Hi",
+        "I want a happy Hindi movie",
+        "Recommend a Korean thriller",
+        "Show me top rated sci-fi films",
+        "I need a movie for kids",
+        "Suggest something romantic",
+    ]
+    for q in demo:
+        result = bot.chat(q, n_recommendations=3)
+        print(f"\nUser : {q}")
+        print(f"Bot  : {result['response']}")
+        print(f"Intent: {result['intent']} (confidence={result['confidence']:.2%})")
+        for m in result["movies"]:
+            print(f"  - {m['title']} ({m['year']}, {m['genre']}, IMDb {m['imdb']})")

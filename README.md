@@ -1,291 +1,208 @@
-# 🎬 Bollywood Movie Recommendation Chatbot
+# 🎬 Movie Recommendation Chatbot
 
-> A **production-quality, closed-domain conversational AI chatbot** for Bollywood movie recommendations powered by Deep Learning + NLP.
+A domain-oriented, NLP-based conversational movie recommender. A feed-forward
+neural network classifies each user message into one of **25 intents** (mood,
+genre, language, age group, or control intents), and a rule-based engine filters
+a catalogue of **5,882 movies** to return the best matches.
 
----
-
-## 🏗️ Architecture Overview
-
-```
-User Query
-    │
-    ▼
-┌─────────────────────────────────────────────────────────┐
-│  NLP PIPELINE                                           │
-│  Tokenization → Lemmatization → Bag-of-Words           │
-└───────────────────────┬─────────────────────────────────┘
-                        │
-                        ▼
-┌─────────────────────────────────────────────────────────┐
-│  DEEP NEURAL NETWORK (TensorFlow/Keras)                 │
-│  Input → Dense(128,relu) → Dropout(0.5)                │
-│        → Dense(64,relu)  → Dropout(0.5)                │
-│        → Dense(n_classes, softmax)                      │
-└───────────────────────┬─────────────────────────────────┘
-                        │
-                        ▼
-              Intent Classification
-                  (25 intents)
-                        │
-                        ▼
-┌─────────────────────────────────────────────────────────┐
-│  ENTITY EXTRACTION (Keyword Matching)                   │
-│  genre | mood | year | language | actor                │
-└───────────────────────┬─────────────────────────────────┘
-                        │
-                        ▼
-┌─────────────────────────────────────────────────────────┐
-│  RECOMMENDATION ENGINE                                  │
-│  Multi-filter: genre + mood + year + IMDb + language   │
-│  TF-IDF Cosine Similarity for "movies like X"          │
-│  Sorted: IMDb → Popularity → Year                      │
-└───────────────────────┬─────────────────────────────────┘
-                        │
-                        ▼
-┌─────────────────────────────────────────────────────────┐
-│  STREAMLIT UI                                           │
-│  Dark theme | Movie cards | Chat history | Sidebar     │
-└─────────────────────────────────────────────────────────┘
-```
+> This project intentionally uses a **closed-domain intent classifier + rule-based
+> recommender**. There is **no sentiment analysis** and no collaborative filtering —
+> recommendations come from mapping the predicted intent to catalogue filters.
 
 ---
 
-## 📁 Project Structure
+## ✨ Features
+
+- **25-intent classifier** — greetings/goodbye/thanks/help, 5 moods, 8 genres,
+  3 languages, 3 age groups, plus `top_rated`, `recent_movies`, `recommend_general`.
+- **Custom NLP pipeline** — regex tokenizer + lightweight suffix-stripping
+  lemmatizer + binary Bag-of-Words (no heavy NLTK/WordNet dependency).
+- **Deep intent model** — `Dense(256) → BN → Dropout(0.4) → Dense(128) → BN →
+  Dropout(0.3) → Dense(64) → Dropout(0.2) → Softmax(25)`.
+- **Stratified 70/15/15 split** with `EarlyStopping` + `ReduceLROnPlateau`.
+- **Confidence threshold (0.40)** with a keyword-matching fallback to
+  `recommend_general`.
+- **5,882-movie catalogue** merged from two public Kaggle datasets and
+  auto-downloaded via `kagglehub`.
+- **Flask web UI** with poster, description, genre, language, mood, and age-group
+  chips.
+
+---
+
+## 🗂️ Project Structure
 
 ```
 movie-chatbot/
-│
-├── data/
-│   ├── bollywood_movies.csv     # Bollywood movie dataset (95+ movies)
-│   ├── intents.json             # 25 intent classes with 15-20 patterns each
-│   └── movies.json              # Auto-generated normalized movie database
-│
-├── models/
-│   ├── chatbot_model.keras      # Trained DNN model
-│   ├── words.npy                # Vocabulary (lemmatized)
-│   └── classes.npy              # Intent class labels
-│
-├── notebooks/
-│   └── experimentation.ipynb   # EDA + training experiments
-│
-├── src/
-│   ├── config.py                # All constants & paths
-│   ├── utils.py                 # Shared helpers + entity extraction
-│   ├── preprocessing.py         # Tokenize → Lemmatize → BoW
-│   ├── train.py                 # Training pipeline
-│   ├── chatbot.py               # Inference engine
-│   ├── recommendation_engine.py # Multi-filter + TF-IDF similarity
-│   └── app.py                   # Streamlit UI
-│
-├── outputs/
-│   ├── training_curve.png       # Loss + accuracy plots
-│   ├── confusion_matrix.png     # Intent classification confusion matrix
-│   └── reports/
-│       └── classification_report.txt
-│
+├── app.py                     # Flask backend (serves UI + /predict API)
 ├── requirements.txt
-├── README.md
-└── .gitignore
+├── data/
+│   ├── intents.json           # 25-intent training corpus
+│   ├── raw/                    # (optional) local dataset fallback CSVs
+│   └── processed/
+│       └── movies.json         # generated 5,882-movie catalogue
+├── models/
+│   ├── movie_chatbot_model.keras
+│   ├── movie_words.npy
+│   └── movie_classes.npy
+├── outputs/                    # training_curve.png, confusion_matrix.png, reports/
+├── src/
+│   ├── config.py               # constants, intent→filter maps, hyperparameters
+│   ├── preprocessing.py        # tokenizer + lemmatizer + Bag-of-Words
+│   ├── dataset.py              # kagglehub download + catalogue builder
+│   ├── train.py                # model training + evaluation
+│   ├── predict.py              # intent inference + keyword fallback
+│   ├── recommender.py          # INTENT_TAG_MAP filtering engine
+│   ├── chatbot.py              # orchestration (intent → response + movies)
+│   ├── evaluation.py           # metrics, confusion matrix, reports
+│   └── utils.py                # logging + JSON helpers
+├── templates/index.html        # chat UI
+└── test_integration.py         # end-to-end checks
 ```
 
 ---
 
-## 🚀 Setup & Installation
+## 📚 Datasets
 
-### 1. Clone / open the project
-```bash
-cd movie-chatbot
+The catalogue is built from two public Kaggle datasets, downloaded automatically
+via [`kagglehub`](https://pypi.org/project/kagglehub/):
+
+| Dataset | Kaggle slug | Key file | Rows used |
+|---|---|---|---|
+| Bollywood Movie Dataset | `mitesh58/bollywood-movie-dataset` | `BollywoodMovieDetail.csv` | 1,284 |
+| TMDB 5000 (with ratings) | `aayushsoni4/tmdb-5000-movie-dataset-with-ratings` | `tmdb_movie_dataset.csv` | 4,602 |
+
+After row standardization and de-duplication (by title + year + language), the
+final catalogue contains **5,882 movies**. Each record follows this schema:
+
+```json
+{
+  "title": "Oldboy",
+  "year": 2003,
+  "genre": "thriller",
+  "language": "korean",
+  "mood": ["thrilled", "dark"],
+  "age_group": ["adult"],
+  "imdb": 8.0,
+  "description": "...",
+  "poster": "https://...",
+  "source": "tmdb"
+}
 ```
 
-### 2. Create a virtual environment
-```bash
-python -m venv venv
-# Windows
-venv\Scripts\activate
-# macOS/Linux
-source venv/bin/activate
-```
+> `kagglehub` downloads public datasets anonymously. If it cannot reach Kaggle,
+> the builder falls back to CSVs placed in `data/raw/`.
 
-### 3. Install dependencies
-```bash
+---
+
+## 🚀 Quick Start
+
+### 1. Install dependencies
+
+```powershell
 pip install -r requirements.txt
 ```
 
-### 4. Download NLTK data (auto-handled by preprocessing.py)
-```python
-import nltk
-nltk.download('punkt')
-nltk.download('wordnet')
-nltk.download('omw-1.4')
+### 2. Build the catalogue (downloads datasets via kagglehub)
+
+```powershell
+python -m src.dataset
+```
+
+This produces `data/processed/movies.json` with 5,882 movies.
+
+### 3. Train the intent model
+
+```powershell
+python -m src.train
+```
+
+Saves `models/movie_chatbot_model.keras` (+ `movie_words.npy`,
+`movie_classes.npy`) and writes training curves, a confusion matrix, and a
+classification report to `outputs/`.
+
+### 4. Run the web app
+
+```powershell
+python app.py
+```
+
+Open <http://localhost:5000> and start chatting.
+
+### 5. (Optional) Run the integration tests
+
+```powershell
+python test_integration.py
 ```
 
 ---
 
-## 🤖 Training the Model
+## 🧠 How It Works
 
-```bash
-python src/train.py
+1. **Preprocessing** (`src/preprocessing.py`) — the message is lowercased,
+   tokenized with a regex, stripped of a small stopword set, and lemmatized by
+   removing common suffixes. It is then encoded as a binary Bag-of-Words over the
+   482-word vocabulary.
+2. **Intent classification** (`src/predict.py`) — the BoW vector is fed to the
+   trained network, which outputs a softmax over 25 intents. If the top
+   confidence is below **0.40**, a keyword fallback maps obvious terms
+   (e.g. "korean", "horror") to an intent, defaulting to `recommend_general`.
+3. **Recommendation** (`src/recommender.py`) — the predicted intent is looked up
+   in `INTENT_TAG_MAP` to obtain filter rules (genre / mood / language / age /
+   min IMDb / min year). Matching movies are sorted by IMDb rating and the top-3
+   are returned.
+4. **Response** (`src/chatbot.py`) — control intents
+   (`greeting`, `goodbye`, `thanks`, `help`) answer directly; all others return a
+   response line plus the recommended movies.
+
+---
+
+## 📊 Model
+
+| Setting | Value |
+|---|---|
+| Architecture | Dense 256 → 128 → 64 → Softmax(25), BatchNorm + Dropout |
+| Optimizer | Adam (lr = 1e-3) |
+| Loss | Categorical cross-entropy |
+| Split | Stratified 70 / 15 / 15 (train / val / test) |
+| Callbacks | EarlyStopping (patience 25) + ReduceLROnPlateau (factor 0.5, patience 8) |
+| Vocabulary | 482 words |
+| Intents | 25 classes |
+
+Typical results: **~85% validation accuracy** and **~84% test accuracy**
+(macro-F1 ≈ 0.83). Metrics and plots are saved to `outputs/`.
+
+---
+
+## 🎯 Intents
+
+`greeting`, `goodbye`, `thanks`, `help`,
+`mood_happy`, `mood_sad`, `mood_romantic`, `mood_excited`, `mood_scared`,
+`genre_action`, `genre_comedy`, `genre_drama`, `genre_thriller`, `genre_scifi`,
+`genre_horror`, `genre_animation`,
+`lang_hindi`, `lang_english`, `lang_korean`,
+`age_teenager`, `age_kids`, `age_adult`,
+`top_rated`, `recent_movies`, `recommend_general`.
+
+---
+
+## 🔌 API
+
+`POST /predict`
+
+```json
+{ "query": "Recommend a Korean thriller", "n_recommendations": 3 }
 ```
 
-**What this does:**
-1. Loads `data/intents.json`
-2. Tokenizes + lemmatizes all patterns
-3. Builds Bag-of-Words vocabulary
-4. Trains DNN with EarlyStopping + ModelCheckpoint
-5. Saves `models/chatbot_model.keras`, `words.npy`, `classes.npy`
-6. Generates `outputs/training_curve.png` + `outputs/confusion_matrix.png`
+Response:
 
----
-
-## 💬 Running the Chatbot UI
-
-```bash
-streamlit run src/app.py
+```json
+{
+  "intent": "lang_korean",
+  "confidence": 0.9996,
+  "response": "🇰🇷 Hallyu wave! Here are some incredible Korean films!",
+  "explanation": "Recommended based on korean language.",
+  "movies": [ { "title": "Oldboy", "year": 2003, "genre": "thriller", "imdb": 8.0, "...": "..." } ]
+}
 ```
 
-Opens at: **http://localhost:8501**
-
----
-
-## 🧠 Model Architecture
-
-| Layer | Config |
-|-------|--------|
-| Input | `vocab_size` features (BoW) |
-| Dense 1 | 128 units, ReLU activation |
-| Dropout 1 | 50% |
-| Dense 2 | 64 units, ReLU activation |
-| Dropout 2 | 50% |
-| Output | `n_classes` units, Softmax |
-
-**Optimizer:** Adam (lr=0.001)  
-**Loss:** Categorical Crossentropy  
-**Callbacks:** EarlyStopping (patience=20) + ModelCheckpoint
-
----
-
-## 🎯 Supported Intents (25)
-
-| Intent | Description |
-|--------|-------------|
-| `greeting` | Hello, Hi, Namaste |
-| `goodbye` | Bye, Farewell |
-| `thanks` | Thank you, Appreciate it |
-| `help` | What can you do |
-| `comedy_movies` | Funny movies |
-| `action_movies` | Fight/action films |
-| `romantic_movies` | Love story films |
-| `thriller_movies` | Suspense/mystery |
-| `emotional_movies` | Drama/tearjerker |
-| `horror_movies` | Scary/ghost films |
-| `family_movies` | Kids/family-friendly |
-| `high_rated_movies` | IMDb 8+ films |
-| `latest_movies` | New releases |
-| `old_classics` | Pre-2000 films |
-| `hindi_movies` | Hindi/Bollywood |
-| `south_movies` | Tamil/Telugu films |
-| `actor_movies` | By actor name |
-| `year_movies` | By release year |
-| `mood_movies` | By current mood |
-| `recommendation` | General suggestion |
-| `movie_like` | Similar to X |
-| `popular_movies` | Trending/box office |
-| `biography_movies` | Biopics |
-| `award_movies` | Award-winning |
-| `multi_filter` | Combined filters |
-| `fallback` | Unrecognized input |
-
----
-
-## 🔍 Entity Extraction
-
-Automatically extracted from natural language:
-
-| Entity | Example Input | Extracted |
-|--------|--------------|-----------|
-| Mood | "funny Hindi movies" | `funny` |
-| Genre | "action films" | `Action` |
-| Year | "movies from 2020" | `2020` |
-| Language | "Tamil movies" | `Tamil` |
-| Actor | "Shah Rukh Khan films" | `Shah Rukh Khan` |
-
----
-
-## 📊 Recommendation Engine
-
-### Filters
-- `recommend_by_genre(genre)`
-- `recommend_by_mood(mood)` — maps mood → genre(s)
-- `recommend_by_rating(min_imdb)`
-- `recommend_by_language(language)`
-- `recommend_by_year(year, year_from, year_to)`
-- `recommend_by_actor(actor)`
-- `recommend_family_friendly()`
-- `recommend_combined(...)` — multi-filter with graceful fallback
-
-### Content-Based Similarity
-- TF-IDF vectorization on movie metadata
-- Cosine similarity for "movies like X"
-
-### Ranking Priority
-1. IMDb rating (descending)
-2. Popularity / vote count (descending)
-3. Release year (descending)
-
----
-
-## 🎨 UI Features
-
-- **Dark theme** with gradient design
-- **Typing animation** for bot responses
-- **Movie cards** with IMDb badge, genre badge, year badge
-- **Sidebar filters**: Genre, Mood, Language, IMDb, Year
-- **Quick search buttons** for common queries
-- **Conversation memory** (multi-turn context)
-- **Intent + confidence display**
-- **Recommendation explanation** ("Recommended because you like...")
-
----
-
-## 📈 Evaluation Outputs
-
-After training:
-- `outputs/training_curve.png` — train/val accuracy + loss
-- `outputs/confusion_matrix.png` — 25×25 intent confusion matrix
-- `outputs/reports/classification_report.txt` — precision, recall, F1
-
----
-
-## 🔮 Future Improvements
-
-- TMDB API integration for poster images
-- Speech-to-text input
-- Transformer-based intent classifier (BERT)
-- User preference learning
-- Collaborative filtering
-- Streaming API for real-time recommendations
-- Multi-language UI support
-
----
-
-## 📋 Tech Stack
-
-| Component | Technology |
-|-----------|-----------|
-| Deep Learning | TensorFlow / Keras |
-| NLP | NLTK (tokenize, lemmatize) |
-| Vectorization | Bag-of-Words + TF-IDF |
-| Similarity | Scikit-learn cosine similarity |
-| Data | Pandas + NumPy |
-| UI | Streamlit |
-| Visualization | Matplotlib + Seaborn |
-
----
-
-## 📄 License
-
-MIT License — Academic project use permitted.
-
----
-
-*Built with ❤️ for Bollywood cinema lovers*
+Other endpoints: `GET /health`, `GET /intents`.

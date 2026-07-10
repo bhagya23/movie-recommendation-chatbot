@@ -1,91 +1,97 @@
 """
-preprocessing.py — NLP preprocessing pipeline.
-Tokenization → Lemmatization → Bag-of-Words vectorization.
+preprocessing.py — NLP preprocessing pipeline (matches the academic notebook).
+
+Pipeline:
+- Tokenization via regex (lowercase alphabetic tokens)
+- Lightweight suffix-stripping lemmatization
+- Stopword removal (small IGNORE set)
+- Binary Bag-of-Words encoding
+- Vocabulary generation
 """
 
 import os
 import sys
-import string
-import logging
+import re
+from typing import List, Tuple
 
 import numpy as np
-import nltk
-from nltk.stem import WordNetLemmatizer
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from src.config import IGNORE_CHARS, WORDS_FILE, CLASSES_FILE
+from src.config import WORDS_FILE, CLASSES_FILE
+from src.utils import get_logger
 
-logger = logging.getLogger("preprocessing")
+logger = get_logger("preprocess")
 
-# Download required NLTK data once
-for _pkg in ["punkt", "wordnet", "omw-1.4", "punkt_tab"]:
-    try:
-        nltk.data.find(f"tokenizers/{_pkg}" if _pkg.startswith("punkt") else f"corpora/{_pkg}")
-    except LookupError:
-        nltk.download(_pkg, quiet=True)
-
-lemmatizer = WordNetLemmatizer()
+# Lightweight suffix-stripping lemmatizer used consistently for training/inference
+SUFFIXES = ["ing", "tion", "ness", "ment", "able", "ful", "less", "es", "ed", "er", "s"]
+IGNORE = {"a", "an", "the", "is", "i", "me", "my", "we", "our", "you", "it"}
 
 
-# ── Core NLP functions ─────────────────────────────────────────────────────────
+# ── Lemmatization ──────────────────────────────────────────────────────────────
 
-def tokenize(sentence: str) -> list[str]:
-    """Tokenize a sentence into words using NLTK word_tokenize."""
-    return nltk.word_tokenize(sentence)
+def lemmatise(word: str) -> str:
+    """Strip a common English suffix if the remaining stem stays meaningful."""
+    for suffix in SUFFIXES:
+        if word.endswith(suffix) and len(word) - len(suffix) > 2:
+            return word[: -len(suffix)]
+    return word
 
 
+# Backwards-compatible alias
 def lemmatize(word: str) -> str:
-    """Lemmatize a single word to its base/root form."""
-    return lemmatizer.lemmatize(word.lower())
+    return lemmatise(word.lower())
 
 
-def clean_sentence(sentence: str) -> list[str]:
+# ── Tokenization ────────────────────────────────────────────────────────────────
+
+def tokenise(text: str) -> List[str]:
+    """Lowercase, extract alphabetic tokens, drop stopwords, and lemmatise."""
+    tokens = re.findall(r"[a-z]+", text.lower())
+    return [lemmatise(tok) for tok in tokens if tok not in IGNORE]
+
+
+# Backwards-compatible aliases
+def tokenize(sentence: str) -> List[str]:
+    return tokenise(sentence)
+
+
+def preprocess_sentence(sentence: str) -> List[str]:
+    """Full preprocessing pipeline for a single sentence."""
+    return tokenise(sentence)
+
+
+# ── Bag of Words ───────────────────────────────────────────────────────────────
+
+def bag_of_words(sentence: str, words: List[str]) -> np.ndarray:
     """
-    Full cleaning pipeline:
-    1. Tokenize
-    2. Lowercase
-    3. Remove punctuation / ignore chars
-    4. Lemmatize
+    Convert a sentence into a binary Bag-of-Words numpy array.
+    Each position = 1 if the corresponding vocabulary word is present.
     """
-    tokens = tokenize(sentence)
-    cleaned = []
-    for token in tokens:
-        token_lower = token.lower()
-        if token_lower not in IGNORE_CHARS and token_lower not in string.punctuation:
-            cleaned.append(lemmatize(token_lower))
-    return cleaned
-
-
-def bag_of_words(sentence: str, words: list[str]) -> np.ndarray:
-    """
-    Convert a sentence into a Bag-of-Words numpy array.
-    Each position = 1 if the corresponding word from vocabulary is present.
-
-    Args:
-        sentence: raw input sentence
-        words:    vocabulary list (sorted, lemmatized)
-
-    Returns:
-        np.ndarray of shape (len(words),) with 0/1 values
-    """
-    sentence_words = clean_sentence(sentence)
+    word_index = {w: i for i, w in enumerate(words)}
     bag = np.zeros(len(words), dtype=np.float32)
-    for sw in sentence_words:
-        for i, w in enumerate(words):
-            if w == sw:
-                bag[i] = 1.0
+    for sw in preprocess_sentence(sentence):
+        idx = word_index.get(sw)
+        if idx is not None:
+            bag[idx] = 1.0
     return bag
 
 
-# ── Vocabulary and classes builder ────────────────────────────────────────────
+# ── Vocabulary generation ──────────────────────────────────────────────────────
 
-def build_vocabulary(intents_data: dict) -> tuple[list[str], list[str], list[tuple]]:
+def build_vocabulary(intents_data: dict) -> Tuple[List[str], List[str], List[Tuple]]:
     """
-    Build vocabulary (words), intent classes, and (bag, class_idx) training docs.
-
+    Build vocabulary (words), intent classes, and training documents.
+    
+    Process:
+    1. Extract all patterns from intents
+    2. Preprocess each pattern
+    3. Build unique vocabulary
+    4. Extract unique intent classes
+    5. Create (word_list, tag) document tuples
+    
     Returns:
-        words:    sorted unique lemmatized vocabulary
-        classes:  sorted unique intent tag list
+        words: sorted unique lemmatized vocabulary
+        classes: sorted unique intent tag list
         documents: list of (pattern_word_list, tag) tuples
     """
     words = []
@@ -98,43 +104,52 @@ def build_vocabulary(intents_data: dict) -> tuple[list[str], list[str], list[tup
             classes.append(tag)
 
         for pattern in intent["patterns"]:
-            word_list = tokenize(pattern)
-            lemmatized = [lemmatize(w) for w in word_list
-                          if w not in IGNORE_CHARS and w not in string.punctuation]
-            words.extend(lemmatized)
-            documents.append((lemmatized, tag))
+            word_list = tokenise(pattern)
+            words.extend(word_list)
+            documents.append((word_list, tag))
 
+    # Remove duplicates and sort
     words = sorted(set(words))
     classes = sorted(set(classes))
 
-    logger.info("Vocabulary size: %d words | %d intent classes | %d training docs",
-                len(words), len(classes), len(documents))
+    logger.info(
+        "Vocabulary built: %d words | %d intent classes | %d training documents",
+        len(words), len(classes), len(documents)
+    )
 
     return words, classes, documents
 
 
-def encode_training_data(
-    documents: list[tuple],
-    words: list[str],
-    classes: list[str]
-) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Encode (word_list, tag) documents into (X, y) arrays.
+# ── Training data encoding ─────────────────────────────────────────────────────
 
-    X: BoW matrix  [n_samples, vocab_size]
-    y: one-hot     [n_samples, n_classes]
+def encode_training_data (
+    documents: List[Tuple],
+    words: List[str],
+    classes: List[str]
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Encode (word_list, tag) documents into (X, y) arrays for training.
+    
+    Args:
+        documents: list of (word_list, tag) tuples
+        words: vocabulary list
+        classes: intent class list
+    
+    Returns:
+        X: BoW matrix [n_samples, vocab_size]
+        y: One-hot encoded labels [n_samples, n_classes]
     """
     X, y = [], []
 
     for word_list, tag in documents:
-        # BoW vector
+        # Create BoW vector
         bow = np.zeros(len(words), dtype=np.float32)
         for w in word_list:
             if w in words:
                 bow[words.index(w)] = 1.0
         X.append(bow)
 
-        # One-hot class label
+        # Create one-hot encoded label
         label = np.zeros(len(classes), dtype=np.float32)
         label[classes.index(tag)] = 1.0
         y.append(label)
@@ -142,16 +157,20 @@ def encode_training_data(
     return np.array(X, dtype=np.float32), np.array(y, dtype=np.float32)
 
 
-def save_artifacts(words: list[str], classes: list[str]) -> None:
-    """Persist words and classes as .npy artifacts."""
+# ── Artifact persistence ───────────────────────────────────────────────────────
+
+def save_artifacts(words: List[str], classes: List[str]) -> None:
+    """Persist vocabulary and classes as .npy artifacts."""
     os.makedirs(os.path.dirname(WORDS_FILE), exist_ok=True)
     np.save(WORDS_FILE, np.array(words, dtype=object))
     np.save(CLASSES_FILE, np.array(classes, dtype=object))
-    logger.info("Saved words.npy (%d) and classes.npy (%d)", len(words), len(classes))
+    logger.info("Saved artifacts: words.npy (%d words), classes.npy (%d classes)", 
+                len(words), len(classes))
 
 
-def load_artifacts() -> tuple[list[str], list[str]]:
+def load_artifacts() -> Tuple[List[str], List[str]]:
     """Load persisted vocabulary and classes."""
-    words   = list(np.load(WORDS_FILE, allow_pickle=True))
+    words = list(np.load(WORDS_FILE, allow_pickle=True))
     classes = list(np.load(CLASSES_FILE, allow_pickle=True))
+    logger.info("Loaded artifacts: %d words, %d classes", len(words), len(classes))
     return words, classes
