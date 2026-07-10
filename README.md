@@ -29,12 +29,25 @@ a catalogue of **5,882 movies** to return the best matches.
 
 ---
 
-## 🗂️ Project Structure
+## � Chatbot UI
+
+![Movie Recommendation Chatbot UI](screenshots/chatbot_ui.png)
+
+The screenshot above shows the chatbot in action — a user asks for a
+*Korean thriller*, the intent is classified with confidence, and the UI
+returns IMDb-rated movie cards with poster, description, mood, and age-group
+chips.
+
+---
+
+## �🗂️ Project Structure
 
 ```
 movie-chatbot/
 ├── app.py                     # Flask backend (serves UI + /predict API)
 ├── requirements.txt
+├── screenshots/
+│   └── chatbot_ui.png          # UI preview for README
 ├── data/
 │   ├── intents.json           # 25-intent training corpus
 │   ├── raw/                    # (optional) local dataset fallback CSVs
