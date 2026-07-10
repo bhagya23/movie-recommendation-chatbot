@@ -18,11 +18,46 @@ from src.config import IGNORE_CHARS, WORDS_FILE, CLASSES_FILE
 logger = logging.getLogger("preprocessing")
 
 # Download required NLTK data once
-for _pkg in ["punkt", "wordnet", "omw-1.4", "punkt_tab"]:
-    try:
-        nltk.data.find(f"tokenizers/{_pkg}" if _pkg.startswith("punkt") else f"corpora/{_pkg}")
-    except LookupError:
-        nltk.download(_pkg, quiet=True)
+_NLTK_RESOURCES = {
+    "punkt": "tokenizers/punkt",
+    "punkt_tab": "tokenizers/punkt_tab",
+    "wordnet": "corpora/wordnet",
+    "omw-1.4": "corpora/omw-1.4",
+}
+
+
+def ensure_nltk_data() -> None:
+    """Ensure required NLTK corpora are available, downloading any that are missing.
+
+    Raises a clear ``RuntimeError`` if a package cannot be downloaded or located,
+    rather than letting the failure surface later as a cryptic tokenizer/lemmatizer
+    error deep inside the NLP pipeline.
+    """
+    for pkg, resource in _NLTK_RESOURCES.items():
+        try:
+            nltk.data.find(resource)
+            continue
+        except LookupError:
+            pass
+
+        logger.info("NLTK resource '%s' missing — downloading...", pkg)
+        if not nltk.download(pkg, quiet=True):
+            raise RuntimeError(
+                f"Failed to download required NLTK package '{pkg}'. "
+                "Check your internet connection, or pre-install it with "
+                f"`python -c \"import nltk; nltk.download('{pkg}')\"`."
+            )
+
+        try:
+            nltk.data.find(resource)
+        except LookupError as exc:
+            raise RuntimeError(
+                f"NLTK package '{pkg}' was downloaded but resource '{resource}' "
+                "could not be located afterwards."
+            ) from exc
+
+
+ensure_nltk_data()
 
 lemmatizer = WordNetLemmatizer()
 
