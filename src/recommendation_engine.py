@@ -20,7 +20,8 @@ from src.config import (
 )
 from src.utils import (
     get_logger, load_movies, build_movies_json,
-    normalize_genre, normalize_language
+    normalize_genre, normalize_language, normalized_text_mask,
+    list_value_mask, boolean_value_mask
 )
 
 logger = get_logger("recommendation_engine")
@@ -102,17 +103,41 @@ class RecommendationEngine:
         ranked = self._rank(df).head(n)
         return ranked.to_dict(orient="records")
 
+    @staticmethod
+    def _apply_genre_mood_filters(
+        df: pd.DataFrame,
+        genre: Optional[str] = None,
+        mood: Optional[str] = None,
+    ) -> pd.DataFrame:
+        """Apply the shared genre and mood filtering rules."""
+        if genre:
+            df = df[normalized_text_mask(
+                df["genre"], genre, normalize_genre, allow_partial=True
+            )]
+
+        if not mood:
+            return df
+
+        mood_field_mask = list_value_mask(df["mood"], mood)
+        if genre:
+            return df[mood_field_mask] if mood_field_mask.sum() >= 2 else df
+
+        target_genres = MOOD_GENRE_MAP.get(mood.lower(), [])
+        genre_mask = df["genre"].str.lower().isin(
+            [target.lower() for target in target_genres]
+        )
+        combined_mask = genre_mask | mood_field_mask
+        return df[combined_mask] if combined_mask.sum() >= 2 else df
+
     # ── Public filter methods ──────────────────────────────────────────────────
 
     def recommend_by_genre(
         self, genre: str, n: int = TOP_RECOMMENDATIONS
     ) -> list[dict]:
-        genre_norm = normalize_genre(genre)
-        mask = self.df["genre"].str.lower() == genre_norm.lower()
+        mask = normalized_text_mask(
+            self.df["genre"], genre, normalize_genre, allow_partial=True
+        )
         result = self.df[mask]
-        if result.empty:
-            mask = self.df["genre"].str.lower().str.contains(genre.lower(), na=False)
-            result = self.df[mask]
         return self._top_n(result, n)
 
     def recommend_by_mood(
@@ -122,13 +147,8 @@ class RecommendationEngine:
         if not target_genres:
             return []
         mask = self.df["genre"].str.lower().isin([g.lower() for g in target_genres])
-        # Also check mood field if present
-        mood_mask = self.df["mood"].apply(
-            lambda m: isinstance(m, list) and mood.lower() in [x.lower() for x in m]
-        )
+        mood_mask = list_value_mask(self.df["mood"], mood)
         combined = self.df[mask | mood_mask]
-        if combined.empty:
-            combined = self.df[mask]
         return self._top_n(combined, n)
 
     def recommend_by_rating(
@@ -140,8 +160,9 @@ class RecommendationEngine:
     def recommend_by_language(
         self, language: str, n: int = TOP_RECOMMENDATIONS
     ) -> list[dict]:
-        lang_norm = normalize_language(language)
-        mask = self.df["language"].str.lower() == lang_norm.lower()
+        mask = normalized_text_mask(
+            self.df["language"], language, normalize_language
+        )
         result = self.df[mask]
         return self._top_n(result, n)
 
@@ -164,18 +185,14 @@ class RecommendationEngine:
     def recommend_by_actor(
         self, actor: str, n: int = TOP_RECOMMENDATIONS
     ) -> list[dict]:
-        actor_lower = actor.lower()
-        mask = self.df["actors"].apply(
-            lambda acts: isinstance(acts, list) and
-            any(actor_lower in a.lower() for a in acts)
-        )
+        mask = list_value_mask(self.df["actors"], actor, partial=True)
         result = self.df[mask]
         return self._top_n(result, n)
 
     def recommend_family_friendly(
         self, n: int = TOP_RECOMMENDATIONS
     ) -> list[dict]:
-        mask = self.df["family_safe"].astype(str).str.lower().isin(["true", "1", "yes"])
+        mask = boolean_value_mask(self.df["family_safe"])
         result = self.df[mask]
         return self._top_n(result, n)
 
@@ -218,48 +235,16 @@ class RecommendationEngine:
         """
         df = self.df.copy()
 
-        # ── Genre filter ──────────────────────────────────────────────────────
-        if genre:
-            genre_norm = normalize_genre(genre)
-            g_mask = df["genre"].str.lower() == genre_norm.lower()
-            if g_mask.sum() == 0:
-                g_mask = df["genre"].str.lower().str.contains(genre.lower(), na=False)
-            df = df[g_mask]
-
-        # ── Mood filter ───────────────────────────────────────────────────────
-        # When genre is set: additionally filter by mood field on already-filtered df
-        # When genre is NOT set: expand mood → target genres, then also check mood field
-        if mood:
-            mood_lower = mood.lower()
-            mood_field_mask = df["mood"].apply(
-                lambda m: isinstance(m, list) and mood_lower in [x.lower() for x in m]
-            )
-            if genre:
-                # Genre already applied — narrow further by mood field if enough results
-                if mood_field_mask.sum() >= 2:
-                    df = df[mood_field_mask]
-                # else: keep genre-only results (mood is incompatible with this genre)
-            else:
-                # No genre — use MOOD_GENRE_MAP expansion + mood field
-                target_genres = MOOD_GENRE_MAP.get(mood_lower, [])
-                genre_exp_mask = df["genre"].str.lower().isin(
-                    [g.lower() for g in target_genres]
-                )
-                combined_mood_mask = genre_exp_mask | mood_field_mask
-                if combined_mood_mask.sum() >= 2:
-                    df = df[combined_mood_mask]
+        df = self._apply_genre_mood_filters(df, genre, mood)
 
         # ── Language filter ───────────────────────────────────────────────────
         if language:
-            lang_norm = normalize_language(language)
-            df = df[df["language"].str.lower() == lang_norm.lower()]
+            df = df[normalized_text_mask(
+                df["language"], language, normalize_language
+            )]
 
         if actor:
-            actor_lower = actor.lower()
-            df = df[df["actors"].apply(
-                lambda acts: isinstance(acts, list) and
-                any(actor_lower in a.lower() for a in acts)
-            )]
+            df = df[list_value_mask(df["actors"], actor, partial=True)]
 
         if year:
             df = df[df["year"] == year]
@@ -272,49 +257,23 @@ class RecommendationEngine:
             df = df[df["imdb"] >= min_imdb]
 
         if family_safe is not None:
-            df = df[df["family_safe"].astype(str).str.lower().isin(
-                ["true", "1", "yes"] if family_safe else ["false", "0", "no"]
-            )]
-
-        # ── Fallback ladder: relax filters one by one (most restrictive first) ──
-        def _apply_genre_mood(base_df):
-            """Re-apply genre + mood filters on a fresh base dataframe."""
-            d = base_df.copy()
-            if genre:
-                gn = normalize_genre(genre)
-                gm = d["genre"].str.lower() == gn.lower()
-                if gm.sum() == 0:
-                    gm = d["genre"].str.lower().str.contains(genre.lower(), na=False)
-                d = d[gm]
-            if mood:
-                ml = mood.lower()
-                mfm = d["mood"].apply(
-                    lambda m: isinstance(m, list) and ml in [x.lower() for x in m]
-                )
-                if genre:
-                    if mfm.sum() >= 2:
-                        d = d[mfm]
-                else:
-                    tg = MOOD_GENRE_MAP.get(ml, [])
-                    gem = d["genre"].str.lower().isin([g.lower() for g in tg])
-                    cmm = gem | mfm
-                    if cmm.sum() >= 2:
-                        d = d[cmm]
-            return d
+            df = df[boolean_value_mask(df["family_safe"], family_safe)]
 
         # Step 1: relax family_safe
         if len(df) < 3 and family_safe is not None:
             logger.debug("Relaxing family_safe filter (%d results) — keeping genre/mood/language.", len(df))
-            df = _apply_genre_mood(self.df)
+            df = self._apply_genre_mood_filters(self.df, genre, mood)
             if language:
-                df = df[df["language"].str.lower() == normalize_language(language).lower()]
+                df = df[normalized_text_mask(
+                    df["language"], language, normalize_language
+                )]
             if min_imdb > 0:
                 df = df[df["imdb"] >= min_imdb]
 
         # Step 2: relax language — only when zero results remain
         if df.empty and language:
             logger.debug("No results with language=%s — relaxing language filter.", language)
-            df = _apply_genre_mood(self.df)
+            df = self._apply_genre_mood_filters(self.df, genre, mood)
             if min_imdb > 0:
                 df = df[df["imdb"] >= min_imdb]
 
@@ -322,9 +281,11 @@ class RecommendationEngine:
         # (respect explicit high ratings set by the user, e.g. IMDb >= 9.0)
         if df.empty and min_imdb > 0:
             logger.debug("No results at IMDb >= %.1f — relaxing threshold.", min_imdb)
-            df = _apply_genre_mood(self.df)
+            df = self._apply_genre_mood_filters(self.df, genre, mood)
             if language:
-                df = df[df["language"].str.lower() == normalize_language(language).lower()]
+                df = df[normalized_text_mask(
+                    df["language"], language, normalize_language
+                )]
 
         # Step 4: final fallback — top-rated overall
         if df.empty:
@@ -476,9 +437,13 @@ class RecommendationEngine:
                 # No year specified — sort by year desc, apply other filters
                 df = self.df.copy()
                 if language:
-                    df = df[df["language"].str.lower() == normalize_language(language).lower()]
+                    df = df[normalized_text_mask(
+                        df["language"], language, normalize_language
+                    )]
                 if genre:
-                    df = df[df["genre"].str.lower() == normalize_genre(genre).lower()]
+                    df = df[normalized_text_mask(
+                        df["genre"], genre, normalize_genre
+                    )]
                 if min_imdb > 0:
                     df = df[df["imdb"] >= min_imdb]
                 movies = self._top_n(df.sort_values("year", ascending=False), n)
@@ -487,7 +452,9 @@ class RecommendationEngine:
         elif intent == "old_classics":
             df = self.df[self.df["year"] < 2000].copy()
             if language:
-                df = df[df["language"].str.lower() == normalize_language(language).lower()]
+                df = df[normalized_text_mask(
+                    df["language"], language, normalize_language
+                )]
             if min_imdb > 0:
                 df = df[df["imdb"] >= min_imdb]
             movies = self._top_n(df, n)
