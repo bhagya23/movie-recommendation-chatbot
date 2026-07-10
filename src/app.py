@@ -5,6 +5,7 @@ Run with:
     streamlit run src/app.py
 """
 
+import logging
 import os
 import sys
 import time
@@ -17,6 +18,8 @@ from src.config import (
     APP_TITLE, APP_SUBTITLE, CHATBOT_NAME, MAX_HISTORY,
     MODELS_DIR, MODEL_FILE
 )
+
+logger = logging.getLogger("app")
 
 # ── Page config (MUST be first Streamlit call) ─────────────────────────────────
 st.set_page_config(
@@ -411,6 +414,7 @@ def main():
                     greeting = st.session_state.chatbot.get_greeting()
                     st.session_state.messages.append({"role": "bot", "content": greeting})
         except Exception as e:
+            logger.exception("Failed to load chatbot model")
             st.error(f"Error loading chatbot: {e}")
             model_not_trained = True
 
@@ -550,7 +554,11 @@ def _render_explore_section(sidebar_filters: dict) -> None:
 
         render_movies_panel(movies, explanation)
     except Exception as e:
-        st.info(f"Start chatting to get movie recommendations! 🎬\n\n_{e}_")
+        logger.exception("Failed to render explore section")
+        st.error(
+            "Couldn't load recommendations right now. "
+            f"Please check the data files and try again.\n\n_{e}_"
+        )
 
 
 if __name__ == "__main__":

@@ -32,8 +32,13 @@ logger = get_logger("utils")
 
 # ── JSON helpers ───────────────────────────────────────────────────────────────
 def load_json(path: str) -> dict | list:
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(f"Required data file not found: {path}") from exc
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Invalid JSON in {path}: {exc}") from exc
 
 
 def save_json(data: dict | list, path: str) -> None:
@@ -108,7 +113,12 @@ def genre_to_moods(genre: str) -> list:
 
 def build_movies_json(csv_path: str = CSV_FILE, out_path: str = MOVIES_FILE) -> list:
     """Convert bollywood_movies.csv → movies.json with normalized fields."""
-    df = pd.read_csv(csv_path)
+    try:
+        df = pd.read_csv(csv_path)
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(f"Movie dataset CSV not found: {csv_path}") from exc
+    except (pd.errors.EmptyDataError, pd.errors.ParserError) as exc:
+        raise ValueError(f"Failed to parse movie CSV {csv_path}: {exc}") from exc
     df.drop_duplicates(inplace=True)
     df.dropna(subset=["title"], inplace=True)
 
