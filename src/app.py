@@ -9,6 +9,7 @@ import os
 import sys
 import time
 import random
+from html import escape as _esc
 
 import streamlit as st
 
@@ -291,13 +292,13 @@ def render_chat():
     for msg in st.session_state.messages[-MAX_HISTORY:]:
         if msg["role"] == "user":
             st.markdown(
-                f'<div class="user-bubble">💬 {msg["content"]}</div>'
+                f'<div class="user-bubble">💬 {_esc(msg["content"])}</div>'
                 '<div class="clearfix"></div>',
                 unsafe_allow_html=True
             )
         else:
             st.markdown(
-                f'<div class="bot-bubble">🎬 <b>{CHATBOT_NAME}:</b> {msg["content"]}</div>'
+                f'<div class="bot-bubble">🎬 <b>{CHATBOT_NAME}:</b> {_esc(msg["content"])}</div>'
                 '<div class="clearfix"></div>',
                 unsafe_allow_html=True
             )
@@ -306,12 +307,12 @@ def render_chat():
 
 # ── Movie card rendering ───────────────────────────────────────────────────────
 def render_movie_card(movie: dict, rank: int) -> None:
-    actors    = ", ".join(movie.get("actors", [])[:3]) or "N/A"
-    title     = movie.get("title", "Unknown Title")
-    genre     = movie.get("genre", "")
-    language  = movie.get("language", "Hindi")
-    year      = movie.get("year", "N/A")
-    imdb      = movie.get("imdb", "N/A")
+    actors    = _esc(", ".join(movie.get("actors", [])[:3]) or "N/A")
+    title     = _esc(str(movie.get("title", "Unknown Title")))
+    genre     = _esc(str(movie.get("genre", "")))
+    language  = _esc(str(movie.get("language", "Hindi")))
+    year      = _esc(str(movie.get("year", "N/A")))
+    imdb      = _esc(str(movie.get("imdb", "N/A")))
 
     # Build optional HTML snippets as plain variables (avoids f-string quote conflicts)
     family_badge = (
@@ -321,7 +322,7 @@ def render_movie_card(movie: dict, rank: int) -> None:
 
     moods = movie.get("mood") or []
     mood_html = (
-        f'<div class="movie-meta">&#x1F3AD; Mood: {", ".join(moods)}</div>'
+        f'<div class="movie-meta">&#x1F3AD; Mood: {_esc(", ".join(moods))}</div>'
         if moods else ""
     )
 
@@ -355,7 +356,7 @@ def render_movies_panel(movies: list[dict], explanation: str) -> None:
 
     if explanation:
         st.markdown(
-            f'<div class="explanation-box">💡 {explanation}</div>',
+            f'<div class="explanation-box">💡 {_esc(explanation)}</div>',
             unsafe_allow_html=True
         )
 
@@ -371,13 +372,13 @@ def typing_animation(placeholder, text: str, delay: float = 0.015) -> None:
     for char in text:
         displayed += char
         placeholder.markdown(
-            f'<div class="bot-bubble">🎬 <b>{CHATBOT_NAME}:</b> {displayed}▋</div>'
+            f'<div class="bot-bubble">🎬 <b>{CHATBOT_NAME}:</b> {_esc(displayed)}▋</div>'
             '<div class="clearfix"></div>',
             unsafe_allow_html=True
         )
         time.sleep(delay)
     placeholder.markdown(
-        f'<div class="bot-bubble">🎬 <b>{CHATBOT_NAME}:</b> {displayed}</div>'
+        f'<div class="bot-bubble">🎬 <b>{CHATBOT_NAME}:</b> {_esc(displayed)}</div>'
         '<div class="clearfix"></div>',
         unsafe_allow_html=True
     )
